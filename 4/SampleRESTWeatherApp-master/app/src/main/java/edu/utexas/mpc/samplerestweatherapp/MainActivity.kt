@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun syncWithPi(){
+        successView.text = "Connecting"
         println("+++++++ Connecting...")
         mqttAndroidClient.connect()
     }
