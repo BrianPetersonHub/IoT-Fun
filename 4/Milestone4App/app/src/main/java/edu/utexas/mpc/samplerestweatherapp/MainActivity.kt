@@ -26,6 +26,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var publishButton: Button
     lateinit var stepsView: TextView
 
+    lateinit var weatherData: String
+
     lateinit var queue: RequestQueue
     lateinit var gson: Gson
     lateinit var mostRecentWeatherResult: WeatherResult
@@ -46,7 +48,7 @@ class MainActivity : AppCompatActivity() {
         // when the user presses the syncbutton, this method will get called
         retrieveButton.setOnClickListener({ requestWeather() })
         confirmButton.setOnClickListener({ syncWithPi() })
-        publishButton.setOnClickListener({})
+        publishButton.setOnClickListener({ publish() })
 
         queue = Volley.newRequestQueue(this)
         gson = Gson()
@@ -54,8 +56,7 @@ class MainActivity : AppCompatActivity() {
         val serverUri = "tcp://192.168.4.1"
         val clientId = "EmergingTechMQTTClient"
 
-        val subscribeTopic = "testTopic2"
-        val publishTopic = "testTopic1"
+        val subscribeTopic = "steps"
 
         mqttAndroidClient = MqttAndroidClient(getApplicationContext(), serverUri, clientId);
 
@@ -67,16 +68,13 @@ class MainActivity : AppCompatActivity() {
                 successView.text = "Connected!"
                 // this subscribes the client to the subscribe topic
                 mqttAndroidClient.subscribe(subscribeTopic, 0)
-                val message = MqttMessage()
-                message.payload = ("Hello World").toByteArray()
 
-                // this publishes a message to the publish topic
-                mqttAndroidClient.publish(publishTopic, message)
             }
 
             // this method is called when a message is received that fulfills a subscription
             override fun messageArrived(topic: String?, message: MqttMessage?) {
                 println(message)
+                stepsView.text = String(message!!.payload)
             }
 
             override fun connectionLost(cause: Throwable?) {
@@ -95,9 +93,10 @@ class MainActivity : AppCompatActivity() {
         val url = StringBuilder("https://api.openweathermap.org/data/2.5/weather?id=4671654&appid=6430c66feae1f80696ed7f2705d73fd6").toString()
         val stringRequest = object : StringRequest(com.android.volley.Request.Method.GET, url,
                 com.android.volley.Response.Listener<String> { response ->
-                    textView.text = response
+//                    textView.text = response
                     mostRecentWeatherResult = gson.fromJson(response, WeatherResult::class.java)
-                    //textView.text = mostRecentWeatherResult.weather.get(0).main
+                    textView.text = mostRecentWeatherResult.weather.get(0).main
+                    weatherData = mostRecentWeatherResult.weather.get(0).main
                 },
                 com.android.volley.Response.ErrorListener { println("******That didn't work!") }) {}
         // Add the request to the RequestQueue.
@@ -108,6 +107,14 @@ class MainActivity : AppCompatActivity() {
         successView.text = "Connecting"
         println("+++++++ Connecting...")
         mqttAndroidClient.connect()
+    }
+
+    fun publish() {
+        val publishTopic = "weather"
+        val message = MqttMessage()
+        message.payload = (weatherData).toByteArray()
+        mqttAndroidClient.publish(publishTopic, message)
+        println("Message published")
     }
 }
 
