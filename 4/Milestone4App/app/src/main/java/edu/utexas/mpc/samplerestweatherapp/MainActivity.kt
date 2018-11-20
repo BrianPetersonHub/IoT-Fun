@@ -30,10 +30,15 @@ class MainActivity : AppCompatActivity() {
     lateinit var stepsView: TextView
 
     lateinit var weatherData: String
+    lateinit var min_temp : String
+    lateinit var max_temp : String
+    lateinit var humidity : String
+    lateinit var payload : String
 
     lateinit var queue: RequestQueue
     lateinit var gson: Gson
     lateinit var mostRecentWeatherResult: WeatherResult
+    lateinit var forecastWeatherResult: Forecast
 
     lateinit var mqttAndroidClient: MqttAndroidClient
 
@@ -56,6 +61,7 @@ class MainActivity : AppCompatActivity() {
 
         queue = Volley.newRequestQueue(this)
         gson = Gson()
+        payload = ""
 
         val serverUri = "tcp://192.168.4.1"
         val clientId = "EmergingTechMQTTClient"
@@ -94,8 +100,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun requestWeather(){
-        val url = StringBuilder("https://api.openweathermap.org/data/2.5/weather?id=4671654&appid=6430c66feae1f80696ed7f2705d73fd6").toString()
-        val stringRequest = object : StringRequest(com.android.volley.Request.Method.GET, url,
+        val currentWeatherURL = StringBuilder("https://api.openweathermap.org/data/2.5/weather?id=4671654&appid=6430c66feae1f80696ed7f2705d73fd6").toString()
+        val stringRequest1 = object : StringRequest(com.android.volley.Request.Method.GET, currentWeatherURL,
                 com.android.volley.Response.Listener<String> { response ->
 //                    textView.text = response
                     mostRecentWeatherResult = gson.fromJson(response, WeatherResult::class.java)
@@ -103,12 +109,35 @@ class MainActivity : AppCompatActivity() {
                             .load("http://openweathermap.org/img/w/"+mostRecentWeatherResult.weather.get(0).icon+".png")
                             .resize(300, 300)
                             .into(weatherImage);
+                    min_temp = (mostRecentWeatherResult.main.temp_min.toString())
+                    max_temp = (mostRecentWeatherResult.main.temp_max.toString())
+                    humidity = (mostRecentWeatherResult.main.humidity.toString())
+
                     textView.text = mostRecentWeatherResult.weather.get(0).main
                     weatherData = mostRecentWeatherResult.weather.get(0).main
+                    payload = min_temp + "#" + max_temp + "#" + humidity
                 },
                 com.android.volley.Response.ErrorListener { println("******That didn't work!") }) {}
+
+        val forecastURL = StringBuilder("https://api.openweathermap.org/data/2.5/forecast?id=4671654&appid=6430c66feae1f80696ed7f2705d73fd6").toString()
+        val stringRequest2 = object : StringRequest(com.android.volley.Request.Method.GET, forecastURL,
+                com.android.volley.Response.Listener<String> { response ->
+                    //                    textView.text = response
+                    forecastWeatherResult = gson.fromJson(response, Forecast::class.java)
+
+                    min_temp = (forecastWeatherResult.list.get(0).main.temp_min.toString())
+                    max_temp = (forecastWeatherResult.list.get(0).main.temp_max.toString())
+                    humidity = (forecastWeatherResult.list.get(0).main.humidity.toString())
+
+                    textView.text = mostRecentWeatherResult.weather.get(0).main
+                    weatherData = mostRecentWeatherResult.weather.get(0).main
+                    payload += "," + min_temp + "#" + max_temp + "#" + humidity
+                },
+                com.android.volley.Response.ErrorListener { println("******That didn't work!") }) {}
+
         // Add the request to the RequestQueue.
-        queue.add(stringRequest)
+        queue.add(stringRequest1)
+        queue.add(stringRequest2)
     }
 
     fun syncWithPi(){
@@ -120,7 +149,7 @@ class MainActivity : AppCompatActivity() {
     fun publish() {
         val publishTopic = "weather"
         val message = MqttMessage()
-        message.payload = (weatherData).toByteArray()
+        message.payload = (payload).toByteArray()
         mqttAndroidClient.publish(publishTopic, message)
         println("Message published")
     }
@@ -130,4 +159,10 @@ class WeatherResult(val id: Int, val name: String, val cod: Int, val coord: Coor
 class Coordinates(val lon: Double, val lat: Double)
 class Weather(val id: Int, val main: String, val description: String, val icon: String)
 class WeatherMain(val temp: Double, val pressure: Double, val humidity: Int, val temp_min: Double, val temp_max: Double)
+
+class Forecast(val cod: String, val list: Array<ForecastItem>, val city: City, val message: String, val cnt: String)
+class City(val name: String)
+class ForecastItem(val dt: Int, val main: ForecastMain)
+class ForecastMain(val temp: Double, val pressure: Double, val humidity: Int, val temp_min: Double, val temp_max: Double)
+
 
