@@ -3,6 +3,7 @@ package edu.utexas.mpc.samplerestweatherapp
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.StringRequest
@@ -12,6 +13,7 @@ import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended
 import org.eclipse.paho.client.mqttv3.MqttMessage
+import com.squareup.picasso.Picasso
 import org.w3c.dom.Text
 
 class MainActivity : AppCompatActivity() {
@@ -20,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     // I'm using lateinit for these widgets because I read that repeated calls to findViewById
     // are energy intensive
     lateinit var textView: TextView
+    lateinit var weatherImage: ImageView
     lateinit var retrieveButton: Button
     lateinit var confirmButton: Button
     lateinit var successView: TextView
@@ -39,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         textView = this.findViewById(R.id.text)
+        weatherImage = this.findViewById(R.id.imageView)
         retrieveButton = this.findViewById(R.id.retrieveButton)
         confirmButton = this.findViewById(R.id.confirmNetworkButton)
         successView = this.findViewById(R.id.successView)
@@ -95,6 +99,10 @@ class MainActivity : AppCompatActivity() {
                 com.android.volley.Response.Listener<String> { response ->
 //                    textView.text = response
                     mostRecentWeatherResult = gson.fromJson(response, WeatherResult::class.java)
+                    Picasso.with(applicationContext)
+                            .load("http://openweathermap.org/img/w/"+mostRecentWeatherResult.weather.get(0).icon+".png")
+                            .resize(300, 300)
+                            .into(weatherImage);
                     textView.text = mostRecentWeatherResult.weather.get(0).main
                     weatherData = mostRecentWeatherResult.weather.get(0).main
                 },
