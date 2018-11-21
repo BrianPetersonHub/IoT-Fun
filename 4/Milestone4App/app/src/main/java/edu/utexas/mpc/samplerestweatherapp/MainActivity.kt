@@ -19,7 +19,10 @@ import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import com.squareup.picasso.Picasso
+import edu.utexas.mpc.samplerestweatherapp.R.id.publishButton
+import edu.utexas.mpc.samplerestweatherapp.R.id.successView
 import org.w3c.dom.Text
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -46,6 +49,11 @@ class MainActivity : AppCompatActivity() {
     lateinit var forecastWeatherResult: Forecast
 
     lateinit var mqttAndroidClient: MqttAndroidClient
+
+
+    var minTempArray = ArrayList<Double>()
+    var maxTempArray = ArrayList<Double>()
+    var humidityArray = ArrayList<Int>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -121,6 +129,8 @@ class MainActivity : AppCompatActivity() {
                     max_temp = (mostRecentWeatherResult.main.temp_max.toString())
                     humidity = (mostRecentWeatherResult.main.humidity.toString())
 
+
+
                     textView.text = mostRecentWeatherResult.weather.get(0).main
                     weatherData = mostRecentWeatherResult.weather.get(0).main
                     payload = min_temp + "#" + max_temp + "#" + humidity
@@ -133,9 +143,28 @@ class MainActivity : AppCompatActivity() {
                     //                    textView.text = response
                     forecastWeatherResult = gson.fromJson(response, Forecast::class.java)
 
-                    min_temp = (forecastWeatherResult.list.get(0).main.temp_min.toString())
-                    max_temp = (forecastWeatherResult.list.get(0).main.temp_max.toString())
-                    humidity = (forecastWeatherResult.list.get(0).main.humidity.toString())
+                    // Getting forecast just for next day
+                    for (result in forecastWeatherResult.list){
+                        if (result.dt_txt.split('-')[2].split(' ')[0] == Date().date.toString()){
+                            minTempArray.add(result.main.temp_min)
+                            maxTempArray.add(result.main.temp_max)
+                            humidityArray.add(result.main.humidity)
+
+                        }
+                    }
+
+//                    Implementing code as Julien's requirement
+//                    for (i in 0..7){
+//                            var result = forecastWeatherResult.list[i]
+//                            minTempArray.add(result.main.temp_min)
+//                            maxTempArray.add(result.main.temp_max)
+//                            humidityArray.add(result.main.humidity)
+//                    }
+
+
+                    min_temp = (minTempArray.sum()/minTempArray.size).toString()
+                    max_temp = (maxTempArray.sum()/maxTempArray.size).toString()
+                    humidity = (humidityArray.sum()/humidityArray.size).toString()
 
                     textView.text = mostRecentWeatherResult.weather.get(0).main
                     weatherData = mostRecentWeatherResult.weather.get(0).main
@@ -206,7 +235,7 @@ class WeatherMain(val temp: Double, val pressure: Double, val humidity: Int, val
 
 class Forecast(val cod: String, val list: Array<ForecastItem>, val city: City, val message: String, val cnt: String)
 class City(val name: String)
-class ForecastItem(val dt: Int, val main: ForecastMain)
+class ForecastItem(val dt: Int, val main: ForecastMain, val dt_txt: String)
 class ForecastMain(val temp: Double, val pressure: Double, val humidity: Int, val temp_min: Double, val temp_max: Double)
 
 
