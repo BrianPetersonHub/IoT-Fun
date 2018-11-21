@@ -1,10 +1,15 @@
 package edu.utexas.mpc.samplerestweatherapp
 
+import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.provider.Settings
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
@@ -58,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         retrieveButton.setOnClickListener({ requestWeather() })
         confirmButton.setOnClickListener({ syncWithPi() })
         publishButton.setOnClickListener({ publish() })
+        publishButton.isEnabled = false
 
         queue = Volley.newRequestQueue(this)
         gson = Gson()
@@ -84,8 +90,10 @@ class MainActivity : AppCompatActivity() {
             // this method is called when a message is received that fulfills a subscription
             override fun messageArrived(topic: String?, message: MqttMessage?) {
                 println(message)
-                stepsView.text = String(message!!.payload)
+                var elements = String(message!!.payload).split(',')
+                stepsView.text = elements[3]
             }
+
 
             override fun connectionLost(cause: Throwable?) {
                 println("Connection Lost")
@@ -138,12 +146,47 @@ class MainActivity : AppCompatActivity() {
         // Add the request to the RequestQueue.
         queue.add(stringRequest1)
         queue.add(stringRequest2)
+
+        Thread.sleep(500)
+        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+        startActivity(intent);
     }
 
     fun syncWithPi(){
-        successView.text = "Connecting"
-        println("+++++++ Connecting...")
-        mqttAndroidClient.connect()
+
+        val builder = AlertDialog.Builder(this@MainActivity)
+
+        // Set the alert dialog title
+        builder.setTitle("Confirm Network Change")
+
+        // Display a message on alert dialog
+        builder.setMessage("Are you connected to pi network?")
+
+        // Set a positive button and its click listener on alert dialog
+        builder.setPositiveButton("YES"){dialog, which ->
+            // Do something when user press the positive button
+            Toast.makeText(applicationContext,"Thank you for confirming. Connecting to pi",Toast.LENGTH_SHORT).show()
+
+
+            successView.text = "Connecting"
+            println("+++++++ Connecting...")
+            mqttAndroidClient.connect()
+            publishButton.isEnabled = true
+        }
+
+
+        // Display a neutral button on alert dialog
+        builder.setNeutralButton("No"){_,_ ->
+            Toast.makeText(applicationContext,"Please connect to pi netwrok before proceeding",Toast.LENGTH_SHORT).show()
+        }
+
+        // Finally, make the alert dialog using builder
+        val dialog: AlertDialog = builder.create()
+
+        // Display the alert dialog on app interface
+        dialog.show()
+
+
     }
 
     fun publish() {
@@ -152,6 +195,7 @@ class MainActivity : AppCompatActivity() {
         message.payload = (payload).toByteArray()
         mqttAndroidClient.publish(publishTopic, message)
         println("Message published")
+
     }
 }
 
